@@ -1,6 +1,18 @@
-# TOPSID MVP v0.2
-Light/casual blue visual aligned with BapakAI DNA, with a subtle vintage barber collection character.
-Flow: Home → Camera/Record → AI Analysis → Top 3 → 30-style Collection → Preview → Barber Card.
-Camera works in browser when permission is granted; current analysis and image preview are mock/demo. Connect Vision AI, image generation, Supabase and Midtrans in the next stage.
-Run: `npm install` then `npm run dev`.
-Deploy: push repo to GitHub and Import in Vercel.
+# TOPSID MVP v0.3
+
+Updated product concept:
+- Home stays simple.
+- TOP'S Collection on Home is exactly 9 styles (3×3).
+- After an AI Check, a personal **TOP'S FOR YOU** layer appears on Home.
+- AI recommendations reuse styles from the TOP'S Collection instead of creating a separate catalog.
+- Journey: Home → Camera → Analysis → TOP'S For You → Preview → Barber Card.
+- A secondary full collection remains available for exploration.
+
+The AI, image generation, Supabase and payment are still mock/placeholders.
+
+Run:
+`npm install`
+`npm run dev`
+
+Deploy:
+Push repository to GitHub and redeploy/import in Vercel.
