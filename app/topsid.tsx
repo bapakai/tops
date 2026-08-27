@@ -186,7 +186,7 @@ export default function Topsid() {
             <label>TOP&apos;S COLLECTION • AI HAIRSTYLE CHECK</label>
             <h1>Gaya yang cocok,<em> sebelum dipotong.</em></h1>
             <p>Rekam wajahmu sebentar. TOPSID membantu menemukan gaya rambut yang paling pas buat kamu.</p>
-            <button className="cta" onClick={openCamera}>◉ &nbsp; Mulai Cek Rambut</button>
+            <button className="cta" onClick={openCamera}>◉ &nbsp; Cari Model Rambutmu</button>
             <small>Gratis 3 rekomendasi / hari • Tanpa daftar</small>
           </div>
 
