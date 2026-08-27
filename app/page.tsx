@@ -1,5 +1,1 @@
-import PotramApp from "./potram-app";
-
-export default function Home() {
-  return <PotramApp />;
-}
+import Topsid from "./topsid"; export default function Page(){return <Topsid/>}
