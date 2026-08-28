@@ -1,1 +1,5 @@
-import Topsid from "./topsid"; export default function Page(){return <Topsid/>}
+import Topsid from "./topsid";
+
+export default function Page() {
+  return <Topsid />;
+}
