@@ -1,14 +1,5 @@
-# TOPSID v0.8 - Classic TOP'S Collection
+# TOPSID v0.9 — Classic TOP’S Collection Collage
 
-Home layout and product journey remain unchanged.
+This version keeps the approved Home UX and brand copy. The TOP’S Collection block is redesigned to recall the classic printed collection-card layout: black board, cream photo frames, individually rotated portrait cards, arched/staggered 3×3 composition, vintage title treatment, and gold accents.
 
-TOP'S Collection visual revision:
-- Straight board/poster; no overall rotation.
-- Classic dark board, cream framed cards, gold borders.
-- Strong top's collection title treatment.
-- Exactly 9 styles in a 3x3 grid.
-- Very subtle individual card tilt keeps the printed vintage character.
-- Original CSS hairstyle portrait icons, not copied poster artwork.
-- Overall UI remains light, casual, premium and Manrope-led.
-
-No backend/API behavior changed.
+The portraits are original CSS illustrations, not copied photographs or poster artwork. No backend/API behavior changed.

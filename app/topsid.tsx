@@ -237,7 +237,7 @@ export default function Topsid() {
                   onClick={() => selectStyle(style)}
                   aria-label={`Lihat ${style.name}`}
                 >
-                  <span className={`hair hair-${index % 6}`} aria-hidden="true"><i /></span>
+                  <span className={`portrait h${(index % 6) + 1}`} aria-hidden="true"><i /></span>
                   <small>{style.name}</small>
                 </button>
               ))}
