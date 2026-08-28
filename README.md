@@ -1,11 +1,13 @@
-# TOPSID — Brand Copy Revision
+# TOPSID v0.7 — Premium Casual UI
 
-Brand direction locked for this revision:
+Design revision only:
 - Brand: TOPSID
-- Tagline: “Cari Model Rambutmu”
-- Primary CTA: “Cari Tahu Sekarang”
-- Supporting copy follows the same simple, friendly, action-oriented language.
-- Representative haircut/barber icons are used as lightweight UI accents.
-- Product flow and technical behavior remain unchanged.
+- Tagline: Cari Model Rambutmu
+- Primary CTA: Cari Tahu Sekarang
+- Manrope typography, aligned with the BapakAI visual DNA.
+- Simpler, more minimal and premium-casual composition.
+- TOP'S Collection is a straight, non-rotated 3×3 poster.
+- Blue/light visual language remains consistent.
+- Existing product flow and demo behavior are preserved.
 
-This revision is intentionally copy + visual cue focused.
+Next phase: connect the real backend/API after UI is approved.
