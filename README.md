@@ -1,13 +1,14 @@
-# TOPSID v0.7 — Premium Casual UI
+# TOPSID v0.8 - Classic TOP'S Collection
 
-Design revision only:
-- Brand: TOPSID
-- Tagline: Cari Model Rambutmu
-- Primary CTA: Cari Tahu Sekarang
-- Manrope typography, aligned with the BapakAI visual DNA.
-- Simpler, more minimal and premium-casual composition.
-- TOP'S Collection is a straight, non-rotated 3×3 poster.
-- Blue/light visual language remains consistent.
-- Existing product flow and demo behavior are preserved.
+Home layout and product journey remain unchanged.
 
-Next phase: connect the real backend/API after UI is approved.
+TOP'S Collection visual revision:
+- Straight board/poster; no overall rotation.
+- Classic dark board, cream framed cards, gold borders.
+- Strong top's collection title treatment.
+- Exactly 9 styles in a 3x3 grid.
+- Very subtle individual card tilt keeps the printed vintage character.
+- Original CSS hairstyle portrait icons, not copied poster artwork.
+- Overall UI remains light, casual, premium and Manrope-led.
+
+No backend/API behavior changed.

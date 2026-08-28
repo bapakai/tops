@@ -226,13 +226,18 @@ export default function Topsid() {
             <small>Coba gratis • Tanpa daftar</small>
           </div>
 
-          <div className="poster"><div className="poster-mark" aria-hidden="true">✂</div>
-            <strong>TOP&apos;S</strong>
-            <b>COLLECTION</b>
-            <div>
+          <div className="poster">
+            <div className="poster-title">top&apos;s <span>collection</span></div>
+            <div className="poster-rule" />
+            <div className="poster-grid">
               {topNine.map((style, index) => (
-                <button key={style.id} onClick={() => selectStyle(style)} aria-label={`Lihat ${style.name}`}>
-                  <span>{["◉", "◒", "◐"][index % 3]}</span>
+                <button
+                  className={`poster-card tilt-${index % 3}`}
+                  key={style.id}
+                  onClick={() => selectStyle(style)}
+                  aria-label={`Lihat ${style.name}`}
+                >
+                  <span className={`hair hair-${index % 6}`} aria-hidden="true"><i /></span>
                   <small>{style.name}</small>
                 </button>
               ))}
