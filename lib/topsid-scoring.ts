@@ -41,13 +41,13 @@ function normalize(value?: string | null) {
   return String(value ?? "").trim().toLowerCase().replace(/[-_]/g, " ");
 }
 
-function includesValue(values: string[] | null | undefined, target?: string) {
+function matches(values: string[] | null | undefined, target?: string) {
   if (!target || !values?.length) return false;
   const wanted = normalize(target);
   return values.some((value) => normalize(value) === wanted);
 }
 
-function label(value?: string) {
+function title(value?: string) {
   if (!value) return "";
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -56,49 +56,64 @@ export function scoreHairstyle(
   profile: UserHairProfile,
   style: HairstyleForScoring
 ): ScoredHairstyle {
+  let score = 0;
   const matched: string[] = [];
   const reasons: string[] = [];
-  let score = 0;
 
-  if (includesValue(style.face_shapes, profile.face_shape)) {
+  if (matches(style.face_shapes, profile.face_shape)) {
     score += WEIGHTS.face_shape;
     matched.push("face_shape");
-    reasons.push(`Bentuk wajah ${label(profile.face_shape)} cocok.`);
-  }
-  if (includesValue(style.hair_types, profile.hair_type)) {
-    score += WEIGHTS.hair_type;
-    matched.push("hair_type");
-    reasons.push(`Tipe rambut ${label(profile.hair_type)} cocok.`);
-  }
-  if (includesValue(style.hair_textures, profile.hair_texture)) {
-    score += WEIGHTS.hair_texture;
-    matched.push("hair_texture");
-    reasons.push(`Tekstur ${label(profile.hair_texture)} mendukung model ini.`);
-  }
-  if (includesValue(style.densities, profile.density)) {
-    score += WEIGHTS.density;
-    matched.push("density");
-    reasons.push(`Ketebalan rambut ${label(profile.density)} sesuai.`);
-  }
-  if (includesValue(style.lengths, profile.length)) {
-    score += WEIGHTS.length;
-    matched.push("length");
-    reasons.push(`Panjang rambut ${label(profile.length)} sesuai.`);
-  }
-  if (normalize(style.maintenance_level) === normalize(profile.maintenance_level)) {
-    score += WEIGHTS.maintenance_level;
-    matched.push("maintenance_level");
-    reasons.push(`Perawatannya sesuai preferensi ${label(profile.maintenance_level)}.`);
+    reasons.push(`Bentuk wajah ${title(profile.face_shape)} cocok.`);
   }
 
-  return { ...style, score: Math.min(100, Math.round(score)), matched, reasons };
+  if (matches(style.hair_types, profile.hair_type)) {
+    score += WEIGHTS.hair_type;
+    matched.push("hair_type");
+    reasons.push(`Tipe rambut ${title(profile.hair_type)} cocok.`);
+  }
+
+  if (matches(style.hair_textures, profile.hair_texture)) {
+    score += WEIGHTS.hair_texture;
+    matched.push("hair_texture");
+    reasons.push(`Tekstur ${title(profile.hair_texture)} mendukung model ini.`);
+  }
+
+  if (matches(style.densities, profile.density)) {
+    score += WEIGHTS.density;
+    matched.push("density");
+    reasons.push(`Ketebalan rambut ${title(profile.density)} sesuai.`);
+  }
+
+  if (matches(style.lengths, profile.length)) {
+    score += WEIGHTS.length;
+    matched.push("length");
+    reasons.push(`Panjang rambut ${title(profile.length)} sesuai.`);
+  }
+
+  if (
+    profile.maintenance_level &&
+    normalize(style.maintenance_level) === normalize(profile.maintenance_level)
+  ) {
+    score += WEIGHTS.maintenance_level;
+    matched.push("maintenance_level");
+    reasons.push(
+      `Perawatan sesuai preferensi ${title(profile.maintenance_level)}.`
+    );
+  }
+
+  return {
+    ...style,
+    score: Math.min(100, Math.round(score)),
+    matched,
+    reasons,
+  };
 }
 
 export function rankHairstyles(
   profile: UserHairProfile,
   styles: HairstyleForScoring[],
   limit = 3
-) {
+): ScoredHairstyle[] {
   return styles
     .map((style) => scoreHairstyle(profile, style))
     .sort((a, b) => {
