@@ -6,16 +6,13 @@ const MODEL =
   process.env.ANTHROPIC_VISION_MODEL ||
   "claude-haiku-4-5-20251001";
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 type HairProfile = {
   face_shape: string | null;
   hair_type: string | null;
   hair_texture: string | null;
   density: string | null;
   length: string | null;
+  confidence: number;
 };
 
 const SYSTEM_PROMPT = `
@@ -39,25 +36,34 @@ Use "unknown" when the photo does not provide enough evidence.
 Never invent a value just to complete the JSON.
 `.trim();
 
-function cleanBase64(input: unknown) {
+function decodeImageData(input: unknown) {
   if (typeof input !== "string") return null;
 
-  const match = input.match(
-    /^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/i
-  );
+  const marker = ";base64,";
+  const markerIndex = input.indexOf(marker);
 
-  if (!match) return null;
+  if (markerIndex < 0) return null;
 
-  return {
-    mediaType: match[1].toLowerCase().replace("jpg", "jpeg") as
-      | "image/jpeg"
-      | "image/png"
-      | "image/webp",
-    data: match[2],
-  };
+  const header = input.slice(0, markerIndex);
+  const data = input.slice(markerIndex + marker.length);
+
+  if (!data) return null;
+
+  const mime = header.slice("data:".length).toLowerCase();
+
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+  if (!allowed.includes(mime)) return null;
+
+  const mediaType =
+    mime === "image/jpg"
+      ? "image/jpeg"
+      : (mime as "image/jpeg" | "image/png" | "image/webp");
+
+  return { mediaType, data };
 }
 
-function parseJson(text: string): HairProfile & { confidence: number } {
+function parseJson(text: string): HairProfile {
   const cleaned = text
     .trim()
     .replace(/^```json/i, "")
@@ -68,25 +74,17 @@ function parseJson(text: string): HairProfile & { confidence: number } {
   const parsed = JSON.parse(cleaned);
 
   const allowed = {
-    face_shape: [
-      "oval",
-      "round",
-      "square",
-      "long",
-      "heart",
-      "diamond",
-      "unknown",
-    ],
+    face_shape: ["oval", "round", "square", "long", "heart", "diamond", "unknown"],
     hair_type: ["straight", "wavy", "curly", "coily", "unknown"],
     hair_texture: ["fine", "medium", "coarse", "unknown"],
     density: ["thin", "medium", "thick", "unknown"],
     length: ["short", "medium", "long", "unknown"],
   };
 
-  const value = (key: keyof typeof allowed) => {
+  function value(key: keyof typeof allowed) {
     const candidate = String(parsed?.[key] ?? "unknown").toLowerCase();
     return allowed[key].includes(candidate) ? candidate : "unknown";
-  };
+  }
 
   return {
     face_shape: value("face_shape"),
@@ -100,8 +98,15 @@ function parseJson(text: string): HairProfile & { confidence: number } {
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(
+        { error: "TOPSID Vision belum dikonfigurasi di Vercel." },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
-    const image = cleanBase64(body?.image);
+    const image = decodeImageData(body?.image);
 
     if (!image) {
       return NextResponse.json(
@@ -110,12 +115,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: "TOPSID Vision belum dikonfigurasi di Vercel." },
-        { status: 500 }
-      );
-    }
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
 
     const response = await client.messages.create({
       model: MODEL,
