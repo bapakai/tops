@@ -19,80 +19,184 @@ const SYSTEM_PROMPT = `
 You are TOPSID Vision, a conservative hairstyle-analysis assistant.
 
 Analyze only visible characteristics in the supplied hair/face photo.
-Do not identify the person. Do not infer age, ethnicity, health, attractiveness,
-personality, or other sensitive traits.
+
+Do not identify the person.
+Do not infer age, ethnicity, health, attractiveness, personality,
+or any other sensitive trait.
 
 Return ONLY valid JSON with exactly these keys:
+
 {
   "face_shape": "oval|round|square|long|heart|diamond|unknown",
   "hair_type": "straight|wavy|curly|coily|unknown",
   "hair_texture": "fine|medium|coarse|unknown",
   "density": "thin|medium|thick|unknown",
   "length": "short|medium|long|unknown",
-  "confidence": 0-100
+  "confidence": 0
 }
+
+Confidence must be a number from 0 to 100.
 
 Use "unknown" when the photo does not provide enough evidence.
 Never invent a value just to complete the JSON.
 `.trim();
 
 function decodeImageData(input: unknown) {
-  if (typeof input !== "string") return null;
+  if (typeof input !== "string") {
+    return null;
+  }
 
   const marker = ";base64,";
   const markerIndex = input.indexOf(marker);
 
-  if (markerIndex < 0) return null;
+  if (markerIndex === -1) {
+    return null;
+  }
 
-  const header = input.slice(0, markerIndex);
-  const data = input.slice(markerIndex + marker.length);
+  const header = input.substring(0, markerIndex);
+  const data = input.substring(markerIndex + marker.length);
 
-  if (!data) return null;
+  if (!data) {
+    return null;
+  }
 
-  const mime = header.slice("data:".length).toLowerCase();
+  const mime = header
+    .substring("data:".length)
+    .toLowerCase();
 
-  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  let mediaType:
+    | "image/jpeg"
+    | "image/png"
+    | "image/webp";
 
-  if (!allowed.includes(mime)) return null;
-
-  const mediaType =
-    mime === "image/jpg"
-      ? "image/jpeg"
-      : (mime as "image/jpeg" | "image/png" | "image/webp");
-
-  return { mediaType, data };
-}
-
-function parseJson(text: string): HairProfile {
-  const cleaned = text
-    .trim()
-    .replace(/^```json/i, "")
-    .replace(/^```/i, "")
-    .replace(/```$/i, "")
-    .trim();
-
-  const parsed = JSON.parse(cleaned);
-
-  const allowed = {
-    face_shape: ["oval", "round", "square", "long", "heart", "diamond", "unknown"],
-    hair_type: ["straight", "wavy", "curly", "coily", "unknown"],
-    hair_texture: ["fine", "medium", "coarse", "unknown"],
-    density: ["thin", "medium", "thick", "unknown"],
-    length: ["short", "medium", "long", "unknown"],
-  };
-
-  function value(key: keyof typeof allowed) {
-    const candidate = String(parsed?.[key] ?? "unknown").toLowerCase();
-    return allowed[key].includes(candidate) ? candidate : "unknown";
+  if (mime === "image/jpeg" || mime === "image/jpg") {
+    mediaType = "image/jpeg";
+  } else if (mime === "image/png") {
+    mediaType = "image/png";
+  } else if (mime === "image/webp") {
+    mediaType = "image/webp";
+  } else {
+    return null;
   }
 
   return {
-    face_shape: value("face_shape"),
-    hair_type: value("hair_type"),
-    hair_texture: value("hair_texture"),
-    density: value("density"),
-    length: value("length"),
-    confidence: Math.min(100, Math.max(0, Number(parsed?.confidence) || 0)),
+    mediaType,
+    data,
+  };
+}
+
+function parseVisionResponse(text: string): HairProfile {
+  let cleaned = text.trim();
+
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.substring(7);
+  }
+
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.substring(3);
+  }
+
+  if (cleaned.endsWith("```")) {
+    cleaned = cleaned.substring(0, cleaned.length - 3);
+  }
+
+  cleaned = cleaned.trim();
+
+  const parsed = JSON.parse(cleaned);
+
+  const faceShapes = [
+    "oval",
+    "round",
+    "square",
+    "long",
+    "heart",
+    "diamond",
+    "unknown",
+  ];
+
+  const hairTypes = [
+    "straight",
+    "wavy",
+    "curly",
+    "coily",
+    "unknown",
+  ];
+
+  const textures = [
+    "fine",
+    "medium",
+    "coarse",
+    "unknown",
+  ];
+
+  const densities = [
+    "thin",
+    "medium",
+    "thick",
+    "unknown",
+  ];
+
+  const lengths = [
+    "short",
+    "medium",
+    "long",
+    "unknown",
+  ];
+
+  const faceShape = String(
+    parsed?.face_shape || "unknown"
+  ).toLowerCase();
+
+  const hairType = String(
+    parsed?.hair_type || "unknown"
+  ).toLowerCase();
+
+  const texture = String(
+    parsed?.hair_texture || "unknown"
+  ).toLowerCase();
+
+  const density = String(
+    parsed?.density || "unknown"
+  ).toLowerCase();
+
+  const length = String(
+    parsed?.length || "unknown"
+  ).toLowerCase();
+
+  const confidenceNumber = Number(
+    parsed?.confidence || 0
+  );
+
+  return {
+    face_shape: faceShapes.includes(faceShape)
+      ? faceShape
+      : "unknown",
+
+    hair_type: hairTypes.includes(hairType)
+      ? hairType
+      : "unknown",
+
+    hair_texture: textures.includes(texture)
+      ? texture
+      : "unknown",
+
+    density: densities.includes(density)
+      ? density
+      : "unknown",
+
+    length: lengths.includes(length)
+      ? length
+      : "unknown",
+
+    confidence: Math.min(
+      100,
+      Math.max(
+        0,
+        Number.isFinite(confidenceNumber)
+          ? confidenceNumber
+          : 0
+      )
+    ),
   };
 }
 
@@ -100,18 +204,29 @@ export async function POST(request: Request) {
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
-        { error: "TOPSID Vision belum dikonfigurasi di Vercel." },
-        { status: 500 }
+        {
+          error:
+            "TOPSID Vision belum dikonfigurasi di Vercel.",
+        },
+        {
+          status: 500,
+        }
       );
     }
 
     const body = await request.json();
+
     const image = decodeImageData(body?.image);
 
     if (!image) {
       return NextResponse.json(
-        { error: "Foto tidak valid. Gunakan JPG, PNG, atau WebP." },
-        { status: 400 }
+        {
+          error:
+            "Foto tidak valid. Gunakan JPG, PNG, atau WebP.",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
@@ -119,37 +234,45 @@ export async function POST(request: Request) {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 300,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: image.mediaType,
-                data: image.data,
+    const response =
+      await client.messages.create({
+        model: MODEL,
+        max_tokens: 300,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: image.mediaType,
+                  data: image.data,
+                },
               },
-            },
-            {
-              type: "text",
-              text: "Analyze this photo for TOPSID and return the required JSON only.",
-            },
-          ],
-        },
-      ],
-    });
+              {
+                type: "text",
+                text:
+                  "Analyze this photo for TOPSID and return the required JSON only.",
+              },
+            ],
+          },
+        ],
+      });
 
     const text = response.content
-      .filter((block) => block.type === "text")
+      .filter(
+        (
+          block
+        ): block is Anthropic.TextBlock =>
+          block.type === "text"
+      )
       .map((block) => block.text)
       .join("\n");
 
-    const profile = parseJson(text);
+    const profile =
+      parseVisionResponse(text);
 
     return NextResponse.json({
       data: profile,
@@ -157,11 +280,19 @@ export async function POST(request: Request) {
       engine: "claude-vision",
     });
   } catch (error) {
-    console.error("TOPSID Vision error:", error);
+    console.error(
+      "TOPSID Vision error:",
+      error
+    );
 
     return NextResponse.json(
-      { error: "Analisis foto belum berhasil. Silakan coba foto lain." },
-      { status: 502 }
+      {
+        error:
+          "Analisis foto belum berhasil. Silakan coba foto lain.",
+      },
+      {
+        status: 502,
+      }
     );
   }
 }
