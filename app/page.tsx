@@ -2,112 +2,141 @@
 
 import { useEffect, useState } from "react";
 
+type HairProfile = {
+  face_shape: string | null;
+  hair_type: string | null;
+  hair_texture: string | null;
+  density: string | null;
+  length: string | null;
+  confidence?: number;
+};
+
 type Style = {
   id: string;
   name: string;
   score?: number;
-  category?: string;
-  description?: string;
-  cut?: string;
+  category?: string | null;
+  description?: string | null;
+  barber_note?: string | null;
+  cut?: string | null;
   reasons?: string[];
 };
 
-type PreviewResponse = {
-  status?: string;
-  preview?: {
-    modelName?: string;
-    photo?: string | null;
-    message?: string;
-  };
-  error?: string;
-};
-
-const defaultProfile = {
-  face_shape: "oval",
-  hair_type: "straight",
-  hair_texture: "straight",
-  density: "medium",
-  length: "medium",
-  maintenance_level: "medium",
-};
-
 export default function Page() {
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [profile, setProfile] = useState<HairProfile | null>(null);
   const [styles, setStyles] = useState<Style[]>([]);
   const [selected, setSelected] = useState<Style | null>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PreviewResponse["preview"] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  function handlePhoto(file?: File) {
+    if (!file) return;
 
-    fetch("/api/recommendations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profile: defaultProfile, limit: 3 }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Gagal mengambil rekomendasi.");
-        return data;
-      })
-      .then((data) => {
-        if (!active) return;
-        const items = Array.isArray(data?.data) ? data.data : [];
-        setStyles(items);
-        if (items[0]) setSelected(items[0]);
-      })
-      .catch((err) => {
-        if (active) setError(err instanceof Error ? err.message : "Gagal mengambil rekomendasi.");
-      });
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Gunakan foto JPG, PNG, atau WebP.");
+      return;
+    }
 
-    return () => {
-      active = false;
-    };
-  }, []);
+    setError("");
+    setProfile(null);
+    setStyles([]);
+    setSelected(null);
 
-  async function makePreview(style: Style) {
-    setSelected(style);
+    const reader = new FileReader();
+    reader.onload = () => setPhoto(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  }
+
+  async function findMyStyles() {
+    if (!photo) {
+      setError("Tambahkan foto kamu dulu.");
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setStyles([]);
+    setSelected(null);
 
     try {
-      const response = await fetch("/api/generate", {
+      setStage("Membaca karakter rambutmu...");
+
+      const analyzeResponse = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: {
-            id: style.id,
-            name: style.name,
-            category: style.category,
-            description: style.description,
-            barber_note: style.cut,
-          },
-          photo,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image: photo }),
       });
 
-      const data: PreviewResponse = await response.json();
+      const analyzeData = await analyzeResponse.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Preview gagal dibuat.");
+      if (!analyzeResponse.ok) {
+        throw new Error(
+          analyzeData?.error || "Analisis foto belum berhasil."
+        );
       }
 
-      setPreview(data.preview ?? null);
+      const detected: HairProfile = analyzeData?.data || {};
+      setProfile(detected);
+
+      setStage("Mencari model yang paling cocok...");
+
+      const recommendationResponse = await fetch(
+        "/api/recommendations",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            profile: {
+              face_shape: detected.face_shape,
+              hair_type: detected.hair_type,
+              hair_texture: detected.hair_texture,
+              density: detected.density,
+              length: detected.length,
+            },
+            limit: 3,
+          }),
+        }
+      );
+
+      const recommendationData =
+        await recommendationResponse.json();
+
+      if (!recommendationResponse.ok) {
+        throw new Error(
+          recommendationData?.error ||
+            "Rekomendasi belum berhasil."
+        );
+      }
+
+      const items: Style[] = Array.isArray(
+        recommendationData?.data
+      )
+        ? recommendationData.data
+        : [];
+
+      setStyles(items);
+
+      if (items[0]) {
+        setSelected(items[0]);
+      }
+
+      setStage("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview gagal dibuat.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan. Silakan coba lagi."
+      );
+      setStage("");
     } finally {
       setLoading(false);
     }
-  }
-
-  function handlePhoto(file?: File) {
-    if (!file || !file.type.startsWith("image/")) return;
-
-    const reader = new FileReader();
-    reader.onload = () => setPhoto(String(reader.result));
-    reader.readAsDataURL(file);
   }
 
   return (
@@ -123,77 +152,166 @@ export default function Page() {
       </header>
 
       <section className="screen">
-        <label>TOPSID • PREVIEW</label>
+        <label>TOPSID</label>
+
         <h1>
-          Lihat model yang <em>cocok untukmu.</em>
+          Cari <em>Model Rambutmu.</em>
         </h1>
+
         <p className="sub">
-          Pilih salah satu rekomendasi TOPSID untuk melihat preview sebelum
-          dibawa ke barber.
+          Upload foto kamu. TOPSID akan membaca karakter rambutmu
+          dan mencari model yang paling cocok.
         </p>
 
-        <div className="preview-upload">
-          <label className="gallery">
-            {photo ? "Ganti foto" : "Tambahkan foto kamu"}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handlePhoto(e.target.files?.[0])}
-            />
-          </label>
-        </div>
+        <label className="gallery">
+          {photo ? "Ganti Foto" : "Pilih Foto Kamu"}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) =>
+              handlePhoto(event.target.files?.[0])
+            }
+          />
+        </label>
+
+        {photo && (
+          <div className="photo-preview">
+            <img src={photo} alt="Foto untuk analisis TOPSID" />
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="cta"
+          onClick={findMyStyles}
+          disabled={!photo || loading}
+        >
+          {loading ? stage || "Menganalisis..." : "Cari Tahu Sekarang"}
+        </button>
 
         {error && <p className="error">{error}</p>}
 
-        <div className="list">
-          {styles.map((style, index) => (
-            <article
-              key={style.id}
-              className={selected?.id === style.id ? "selected" : ""}
-            >
-              <b className="rank">{index + 1}</b>
+        {profile && (
+          <section className="analysis">
+            <label>HASIL ANALISIS</label>
 
-              <div className="stylepic">
-                {photo ? (
-                  <img src={photo} alt="" />
-                ) : (
-                  <span>{["✦", "◒", "✂"][index] ?? "✦"}</span>
-                )}
+            <div className="profile-grid">
+              <div>
+                <small>Bentuk wajah</small>
+                <strong>{profile.face_shape || "—"}</strong>
               </div>
 
               <div>
-                <small>{style.category || "TOP'S Collection"}</small>
-                <h3>{style.name}</h3>
-                <p>{style.description || "Model rambut pilihan TOPSID."}</p>
-                {typeof style.score === "number" && style.score > 0 && (
-                  <strong>Cocok {style.score}%</strong>
-                )}
-                {style.reasons?.[0] && (
-                  <small className="match-reason">{style.reasons[0]}</small>
-                )}
+                <small>Tipe rambut</small>
+                <strong>{profile.hair_type || "—"}</strong>
               </div>
 
-              <button onClick={() => makePreview(style)} disabled={loading}>
-                {loading && selected?.id === style.id
-                  ? "Menyiapkan..."
-                  : "Coba model ini →"}
-              </button>
-            </article>
-          ))}
-        </div>
+              <div>
+                <small>Tekstur</small>
+                <strong>{profile.hair_texture || "—"}</strong>
+              </div>
 
-        {selected && (
+              <div>
+                <small>Ketebalan</small>
+                <strong>{profile.density || "—"}</strong>
+              </div>
+
+              <div>
+                <small>Panjang</small>
+                <strong>{profile.length || "—"}</strong>
+              </div>
+
+              <div>
+                <small>Confidence</small>
+                <strong>
+                  {typeof profile.confidence === "number"
+                    ? `${profile.confidence}%`
+                    : "—"}
+                </strong>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {styles.length > 0 && (
+          <section className="recommendations">
+            <label>TOP 3 UNTUKMU</label>
+
+            <h2>
+              Model yang <em>paling cocok.</em>
+            </h2>
+
+            <div className="list">
+              {styles.map((style, index) => (
+                <article
+                  key={style.id}
+                  className={
+                    selected?.id === style.id
+                      ? "selected"
+                      : ""
+                  }
+                >
+                  <b className="rank">{index + 1}</b>
+
+                  <div className="stylepic">
+                    {photo ? (
+                      <img src={photo} alt="" />
+                    ) : (
+                      <span>✦</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <small>
+                      {style.category || "TOP'S Collection"}
+                    </small>
+
+                    <h3>{style.name}</h3>
+
+                    <p>
+                      {style.description ||
+                        "Model rambut pilihan TOPSID."}
+                    </p>
+
+                    {typeof style.score === "number" &&
+                      style.score > 0 && (
+                        <strong>
+                          Cocok {style.score}%
+                        </strong>
+                      )}
+
+                    {style.reasons?.[0] && (
+                      <small className="match-reason">
+                        {style.reasons[0]}
+                      </small>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelected(style)}
+                  >
+                    Lihat Model →
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {selected && styles.length > 0 && (
           <section className="preview-panel">
-            <label>PREVIEW PILIHAN</label>
+            <label>MODEL PILIHAN</label>
+
             <h2>
               {selected.name} <em>untukmu.</em>
             </h2>
 
             <div className="preview-card">
               <div className="stylepic large">
-                {preview?.photo || photo ? (
+                {photo ? (
                   <img
-                    src={preview?.photo || photo || ""}
+                    src={photo}
                     alt={`Preview ${selected.name}`}
                   />
                 ) : (
@@ -202,55 +320,65 @@ export default function Page() {
               </div>
 
               <div>
-                <small>{selected.category || "TOP'S Collection"}</small>
+                <small>
+                  {selected.category || "TOP'S Collection"}
+                </small>
+
                 <h3>{selected.name}</h3>
 
-                {typeof selected.score === "number" && selected.score > 0 && (
-                  <strong>Cocok {selected.score}%</strong>
-                )}
+                {typeof selected.score === "number" &&
+                  selected.score > 0 && (
+                    <strong>
+                      Cocok {selected.score}%
+                    </strong>
+                  )}
 
                 <p>
                   {selected.description ||
-                    "Model pilihan berdasarkan profil rambutmu."}
+                    "Model pilihan berdasarkan karakter rambutmu."}
                 </p>
 
                 {selected.reasons?.length ? (
                   <div className="reasons">
-                    {selected.reasons.slice(0, 3).map((reason) => (
-                      <span key={reason}>✓ {reason}</span>
-                    ))}
+                    {selected.reasons
+                      .slice(0, 3)
+                      .map((reason) => (
+                        <span key={reason}>
+                          ✓ {reason}
+                        </span>
+                      ))}
                   </div>
                 ) : null}
 
-                {selected.cut && (
+                {(selected.barber_note ||
+                  selected.cut) && (
                   <p>
-                    <b>Catatan barber:</b> {selected.cut}
+                    <b>Catatan barber:</b>{" "}
+                    {selected.barber_note ||
+                      selected.cut}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="preview-actions">
-              <button
-                className="cta"
-                onClick={() => makePreview(selected)}
-                disabled={loading}
-              >
-                {loading ? "Menyiapkan Preview..." : "Coba Model Ini"}
-              </button>
+            <button
+              type="button"
+              className="outline wide"
+              onClick={() => {
+                const text =
+                  `TOPSID — ${selected.name}` +
+                  (selected.score
+                    ? ` (${selected.score}% cocok)`
+                    : "") +
+                  `\n${selected.barber_note || selected.cut || ""}`;
 
-              <button
-                className="outline wide"
-                onClick={() => {
-                  const text = `TOPSID — ${selected.name}${selected.score ? ` (${selected.score}% cocok)` : ""}\n${selected.cut || ""}`;
-                  if (navigator.clipboard) {
-                    navigator.clipboard.writeText(text);
-                  }
-                }}
-              >
-                Salin detail untuk Barber
-              </button>
-            </div>
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(text);
+                }
+              }}
+            >
+              Salin Detail untuk Barber
+            </button>
           </section>
         )}
       </section>
