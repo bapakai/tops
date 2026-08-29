@@ -45,11 +45,37 @@ const styles: Style[] = [
   { id: "shag", name: "Shag", score: 39, category: "Modern", description: "Layer ringan dengan karakter messy.", cut: "Layer • fringe medium" }
 ];
 
-const topNine = styles.slice(0, 9);
+const [collection, setCollection] = useState(styles);
+
+const topNine = collection.slice(0, 9);
+
 const recommendations = styles.slice(0, 3);
 
 export default function Topsid() {
-  const [step, setStep] = useState<Step>("home");
+  
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/hairstyles?limit=30")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("collection request failed");
+        return response.json();
+      })
+      .then((payload) => {
+        if (!cancelled && Array.isArray(payload?.data) && payload.data.length > 0) {
+          setCollection(payload.data);
+        }
+      })
+      .catch((error) => {
+        console.warn("TOPSID: using local hairstyle fallback.", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+const [step, setStep] = useState<Step>("home");
   const [photo, setPhoto] = useState<string | null>(null);
   const [selected, setSelected] = useState<Style>(recommendations[0]);
   const [hasChecked, setHasChecked] = useState(false);
