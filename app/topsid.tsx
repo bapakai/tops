@@ -45,14 +45,14 @@ const styles: Style[] = [
   { id: "shag", name: "Shag", score: 39, category: "Modern", description: "Layer ringan dengan karakter messy.", cut: "Layer • fringe medium" }
 ];
 
-const [collection, setCollection] = useState(styles);
-
-const topNine = collection.slice(0, 9);
+const topNineFallback = styles.slice(0, 9);
 
 const recommendations = styles.slice(0, 3);
 
 export default function Topsid() {
-  
+  const [collection, setCollection] = useState<Style[]>(styles);
+  const topNine = collection.slice(0, 9);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -63,7 +63,15 @@ export default function Topsid() {
       })
       .then((payload) => {
         if (!cancelled && Array.isArray(payload?.data) && payload.data.length > 0) {
-          setCollection(payload.data);
+          const remoteStyles: Style[] = payload.data.map((item: any, index: number) => ({
+            id: String(item.id),
+            name: String(item.name),
+            score: 100 - index,
+            category: String(item.category ?? "Classic"),
+            description: String(item.description ?? "Model rambut pilihan TOP'S Collection."),
+            cut: String(item.barber_note ?? "Tanyakan detail potongan kepada barber.")
+          }));
+          setCollection(remoteStyles);
         }
       })
       .catch((error) => {
