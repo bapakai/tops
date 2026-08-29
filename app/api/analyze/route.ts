@@ -41,7 +41,11 @@ Never invent a value just to complete the JSON.
 
 function cleanBase64(input: unknown) {
   if (typeof input !== "string") return null;
-  const match = input.match(/^data:(image\\/(?:jpeg|jpg|png|webp));base64,(.+)$/i);
+
+  const match = input.match(
+    /^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/i
+  );
+
   if (!match) return null;
 
   return {
@@ -64,11 +68,19 @@ function parseJson(text: string): HairProfile & { confidence: number } {
   const parsed = JSON.parse(cleaned);
 
   const allowed = {
-    face_shape: ["oval","round","square","long","heart","diamond","unknown"],
-    hair_type: ["straight","wavy","curly","coily","unknown"],
-    hair_texture: ["fine","medium","coarse","unknown"],
-    density: ["thin","medium","thick","unknown"],
-    length: ["short","medium","long","unknown"],
+    face_shape: [
+      "oval",
+      "round",
+      "square",
+      "long",
+      "heart",
+      "diamond",
+      "unknown",
+    ],
+    hair_type: ["straight", "wavy", "curly", "coily", "unknown"],
+    hair_texture: ["fine", "medium", "coarse", "unknown"],
+    density: ["thin", "medium", "thick", "unknown"],
+    length: ["short", "medium", "long", "unknown"],
   };
 
   const value = (key: keyof typeof allowed) => {
@@ -146,9 +158,7 @@ export async function POST(request: Request) {
     console.error("TOPSID Vision error:", error);
 
     return NextResponse.json(
-      {
-        error: "Analisis foto belum berhasil. Silakan coba foto lain.",
-      },
+      { error: "Analisis foto belum berhasil. Silakan coba foto lain." },
       { status: 502 }
     );
   }
