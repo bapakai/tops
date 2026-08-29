@@ -63,8 +63,7 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      const detail = await response.text();
-      console.error("TOPSID recommendation Supabase error:", detail);
+      console.error("TOPSID recommendation Supabase error:", await response.text());
 
       return NextResponse.json(
         { data: [], error: "Gagal mengambil data model rambut." },
