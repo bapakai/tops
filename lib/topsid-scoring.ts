@@ -35,7 +35,6 @@ const WEIGHTS = {
   hair_texture: 15,
   density: 10,
   length: 10,
-  maintenance_level: 10,
 } as const;
 
 const LABELS: Record<keyof typeof WEIGHTS, string> = {
@@ -44,7 +43,6 @@ const LABELS: Record<keyof typeof WEIGHTS, string> = {
   hair_texture: "tekstur rambut",
   density: "ketebalan rambut",
   length: "panjang rambut",
-  maintenance_level: "kebutuhan perawatan",
 };
 
 function normalize(v?: string | null) {
@@ -94,7 +92,6 @@ export function scoreHairstyle(profile:UserHairProfile, style:HairstyleForScorin
     ["hair_texture",profile.hair_texture,style.hair_textures],
     ["density",profile.density,style.densities],
     ["length",profile.length,style.lengths],
-    ["maintenance_level",profile.maintenance_level,style.maintenance_level?[style.maintenance_level]:null],
   ];
   for(const [key,pv,sv] of factors){const r=factor(pv,sv,WEIGHTS[key],key);if(r.matched){score+=r.points;matched.push(key);reasons.push(r.reason);}}
   return {...style,score:Math.min(100,Math.round(score)),matched,reasons};
