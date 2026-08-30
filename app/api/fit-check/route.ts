@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { analyzeHairPhoto } from "../../../lib/topsid-vision";
 import { fitAdjustments, scoreHairstyle, type UserHairProfile } from "../../../lib/topsid-scoring";
+import { checkAndIncrementUsage } from "../../../lib/topsid-usage";
 
-const URL=process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY=process.env.SUPABASE_SERVICE_ROLE_KEY;
 const FIELDS="id,name,category,description,barber_note,face_shapes,hair_types,hair_textures,densities,lengths,maintenance_level,collection_order,reference_image_url";
 
@@ -10,13 +11,17 @@ function restHeaders(){return {apikey:KEY!,Authorization:`Bearer ${KEY!}`,"Conte
 
 export async function POST(request:Request){
   try{
-    if(!URL||!KEY) throw new Error("Supabase belum dikonfigurasi.");
+    if(!SUPABASE_URL||!KEY) throw new Error("Supabase belum dikonfigurasi.");
     const body=await request.json();
     const hairstyleId=typeof body?.hairstyle_id==="string"?body.hairstyle_id:"";
     if(!hairstyleId) return NextResponse.json({error:"Model rambut belum dipilih."},{status:400});
 
+    const deviceId=typeof body?.device_id==="string"?body.device_id:null;
+    const usage=await checkAndIncrementUsage(deviceId);
+    if(!usage.allowed) return NextResponse.json({error:`Batas analisis gratis hari ini tercapai (${usage.count}/${usage.limit}). Coba lagi besok ya.`},{status:429});
+
     const a=await analyzeHairPhoto(body?.image);
-    const url=new URL(`${URL}/rest/v1/topsid_hairstyles`);
+    const url=new URL(`${SUPABASE_URL}/rest/v1/topsid_hairstyles`);
     url.searchParams.set("select",FIELDS);
     url.searchParams.set("id",`eq.${hairstyleId}`);
     url.searchParams.set("limit","1");
