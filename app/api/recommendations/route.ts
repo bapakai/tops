@@ -4,64 +4,12 @@ import { rankHairstyles, recommendationConfidence, type UserHairProfile } from "
 const URL=process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY=process.env.SUPABASE_SERVICE_ROLE_KEY;
 const FIELDS="id,name,category,description,barber_note,face_shapes,hair_types,hair_textures,densities,lengths,maintenance_level,collection_order,reference_image_url";
-
-function profileOf(input:unknown):UserHairProfile{
-  if(!input||typeof input!=="object")return {};
-  const x=input as Record<string,unknown>;
-  const t=(k:string)=>typeof x[k]==="string"?String(x[k]).trim().toLowerCase():null;
-  return {face_shape:t("face_shape"),hair_type:t("hair_type"),hair_texture:t("hair_texture"),density:t("density"),length:t("length"),maintenance_level:t("maintenance_level")};
-}
-
-async function rest(path:string,init?:RequestInit){
-  if(!URL||!KEY) throw new Error("Supabase belum dikonfigurasi.");
-  return fetch(`${URL}/rest/v1/${path}`,{...init,headers:{apikey:KEY,Authorization:`Bearer ${KEY}`,"Content-Type":"application/json",...(init?.headers||{})}});
-}
-
-export async function POST(request:Request){
-  try{
-    const body=await request.json();
-    const profile=profileOf(body?.profile);
-    const limit=Math.min(Math.max(Number(body?.limit??3)||3,1),9);
-
-    // IMPORTANT: recommendation engine is NOT restricted to the 15 featured models.
-    // Featured collection is only a discovery layer on Home.
-    const url=new URL(`${URL}/rest/v1/topsid_hairstyles`);
-    url.searchParams.set("select",FIELDS);
-    url.searchParams.set("order","collection_order.asc,id.asc");
-    url.searchParams.set("limit","100");
-
-    const response=await fetch(url,{headers:{apikey:KEY!,Authorization:`Bearer ${KEY!}`},cache:"no-store"});
-    if(!response.ok) throw new Error("Gagal mengambil knowledge base model rambut.");
-    const styles=await response.json();
-    const data=rankHairstyles(profile,styles,limit);
-    if(!data.length) throw new Error("Knowledge base model rambut kosong.");
-
-    let sessionId:string|null=null;
-    try{
-      const session=await rest("topsid_analysis_sessions",{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify({
-        device_id:typeof body?.device_id==="string"?body.device_id:null,status:"completed",
-        face_shape:profile.face_shape,hair_type:profile.hair_type,hair_texture:profile.hair_texture,
-        hair_density:profile.density,hair_length:profile.length,source:"camera",completed_at:new Date().toISOString()
-      })});
-      if(session.ok){const rows=await session.json();sessionId=rows?.[0]?.id??null;}
-    }catch(e){console.warn("TOPSID session save skipped",e);}
-
-    if(sessionId){
-      try{
-        await rest("topsid_recommendations",{method:"POST",body:JSON.stringify(data.map((x:any,i:number)=>({
-          session_id:sessionId,hairstyle_id:x.id,rank:i+1,score:x.score,
-          score_breakdown:{matched:x.matched,reasons:x.reasons}
-        })))});
-      }catch(e){console.warn("TOPSID recommendation save skipped",e);}
-    }
-
-    return NextResponse.json({
-      data,profile,session_id:sessionId,
-      engine:{version:"2.0",scope:"unrestricted_knowledge_base",confidence:recommendationConfidence(profile,data),
-        weights:{face_shape:35,hair_type:20,hair_texture:15,density:10,length:10,maintenance_level:10}}
-    });
-  }catch(error){
-    console.error("TOPSID recommendation error:",error);
-    return NextResponse.json({data:[],error:error instanceof Error?error.message:"Rekomendasi belum tersedia."},{status:500});
-  }
-}
+function profileOf(input:unknown):UserHairProfile{if(!input||typeof input!=="object")return{};const x=input as Record<string,unknown>;const t=(k:string)=>typeof x[k]==="string"?String(x[k]).trim().toLowerCase():null;return{face_shape:t("face_shape"),hair_type:t("hair_type"),hair_texture:t("hair_texture"),density:t("density"),length:t("length"),maintenance_level:t("maintenance_level")}}
+async function rest(path:string,init?:RequestInit){if(!URL||!KEY)throw new Error("Supabase belum dikonfigurasi.");return fetch(`${URL}/rest/v1/${path}`,{...init,headers:{apikey:KEY,Authorization:`Bearer ${KEY}`,"Content-Type":"application/json",...(init?.headers||{})}})}
+export async function POST(request:Request){try{const body=await request.json();const profile=profileOf(body?.profile);const limit=Math.min(Math.max(Number(body?.limit??3)||3,1),9);if(!URL||!KEY)throw new Error("Supabase belum dikonfigurasi.");
+ const url=new URL(`${URL}/rest/v1/topsid_hairstyles`);url.searchParams.set("select",FIELDS);url.searchParams.set("is_active","eq.true");url.searchParams.set("order","collection_order.asc,id.asc");url.searchParams.set("limit","100");
+ const response=await fetch(url,{headers:{apikey:KEY,Authorization:`Bearer ${KEY}`},next:{revalidate:60}});if(!response.ok)throw new Error("Gagal mengambil knowledge base model rambut.");const styles=await response.json();const data=rankHairstyles(profile,styles,limit);if(!data.length)throw new Error("Knowledge base model rambut kosong.");
+ let sessionId:string|null=null;try{const source=body?.source==="gallery"?"gallery":"camera";const session=await rest("topsid_analysis_sessions",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({device_id:typeof body?.device_id==="string"?body.device_id:null,status:"completed",face_shape:profile.face_shape,hair_type:profile.hair_type,hair_texture:profile.hair_texture,hair_density:profile.density,hair_length:profile.length,source,completed_at:new Date().toISOString()})});if(session.ok){const rows=await session.json();sessionId=rows?.[0]?.id??null}}catch(e){console.warn("TOPSID session save skipped",e)}
+ if(sessionId){try{await rest("topsid_recommendations",{method:"POST",body:JSON.stringify(data.map((x:any,i:number)=>({session_id:sessionId,hairstyle_id:x.id,rank:i+1,score:x.score,score_breakdown:{matched:x.matched,reasons:x.reasons}})))})}catch(e){console.warn("TOPSID recommendation save skipped",e)}}
+ return NextResponse.json({data,profile,session_id:sessionId,engine:{version:"2.1",scope:"active_knowledge_base",confidence:recommendationConfidence(profile,data),weights:{face_shape:35,hair_type:20,hair_texture:15,density:10,length:10,maintenance_level:10}}})
+ }catch(error){console.error("TOPSID recommendation error:",error);return NextResponse.json({data:[],error:error instanceof Error?error.message:"Rekomendasi belum tersedia."},{status:500})}}
