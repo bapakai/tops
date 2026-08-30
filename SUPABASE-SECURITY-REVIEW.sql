@@ -1,0 +1,12 @@
+-- REVIEW ONLY. Do NOT run blindly.
+-- Supabase advisor currently reports these public tables have RLS disabled:
+-- public.system_health_log
+-- public.chat_api_log
+--
+-- Enabling RLS without policies will block intended access.
+-- Decide first whether these tables should be service-role/server-only.
+-- If they are server-only, the safe direction is to enable RLS and keep
+-- client policies absent, while server-side service-role writes continue.
+--
+-- ALTER TABLE public.system_health_log ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.chat_api_log ENABLE ROW LEVEL SECURITY;
