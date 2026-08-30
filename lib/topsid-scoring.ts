@@ -59,11 +59,11 @@ function pretty(v?: string | null) {
 function aliases(v?: string | null) {
   const n = normalize(v);
   const map: Record<string,string[]> = {
-    round:["round","bulat"], square:["square","kotak"], long:["long","lonjong"],
+    round:["round","bulat"], square:["square","kotak"],
     oval:["oval"], heart:["heart"], diamond:["diamond"],
     straight:["straight","lurus"], wavy:["wavy","bergelombang"], curly:["curly","keriting","ikal"], coily:["coily"],
     fine:["fine","halus"], medium:["medium","sedang"], coarse:["coarse","kasar"],
-    thin:["thin","tipis"], thick:["thick","tebal"], short:["short","pendek"], long:["long","panjang"],
+    thin:["thin","tipis"], thick:["thick","tebal"], short:["short","pendek"], long:["long","panjang","lonjong"],
     "low maintenance":["low maintenance","rendah","mudah"],
     "medium maintenance":["medium maintenance","medium","sedang"],
     "high maintenance":["high maintenance","tinggi"],
