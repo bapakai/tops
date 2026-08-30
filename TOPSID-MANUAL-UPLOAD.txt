@@ -1,0 +1,25 @@
+TOPSID V2 — MANUAL REPLACE
+
+Replace these exact files in repo bapakai/tops:
+
+1. app/page.tsx
+2. app/api/analyze/route.ts
+3. app/api/recommendations/route.ts
+4. app/api/fit-check/route.ts          (NEW)
+5. app/api/hairstyles/route.ts
+6. lib/topsid-scoring.ts
+7. lib/topsid-vision.ts                (NEW)
+
+SUPABASE:
+- The required TOPSID recommendation index has already been applied directly to Supabase.
+- SQL reference is included as SUPABASE-TOPSID-INDEX.sql.
+
+IMPORTANT ENGINE BEHAVIOR:
+- Home TOP'S COLLECTION = featured discovery layer only.
+- AI recommendation engine searches the full topsid_hairstyles knowledge base.
+- Clicking a collection model opens its reference/brief.
+- "Cek model ini di wajahku" starts the Fit Check journey.
+- Fit Check uses the same vision analysis + deterministic hairstyle scoring.
+- Existing reference images from /public/refs are used first; fallback is shown if an asset is missing.
+
+Do not delete existing public/refs assets.
