@@ -18,7 +18,7 @@ export async function POST(request:Request){
 
     const deviceId=typeof body?.device_id==="string"?body.device_id:null;
     const usage=await checkAndIncrementUsage(deviceId);
-    if(!usage.allowed) return NextResponse.json({error:`Batas analisis gratis hari ini tercapai (${usage.count}/${usage.limit}). Coba lagi besok ya.`},{status:429});
+    if(!usage.allowed) return NextResponse.json({error:`Jatah gratis hari ini abis (${usage.count}/${usage.limit}). Isi kredit atau coba lagi besok.`,code:"usage_limit"},{status:429});
 
     const a=await analyzeHairPhoto(body?.image);
     const url=new URL(`${SUPABASE_URL}/rest/v1/topsid_hairstyles`);
