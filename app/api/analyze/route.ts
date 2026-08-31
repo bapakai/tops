@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const usage = await checkAndIncrementUsage(deviceId);
     if (!usage.allowed) {
       return NextResponse.json(
-        { error: `Batas analisis gratis hari ini tercapai (${usage.count}/${usage.limit}). Coba lagi besok ya.` },
+        { error: `Jatah gratis hari ini abis (${usage.count}/${usage.limit}). Isi kredit atau coba lagi besok.`, code: "usage_limit" },
         { status: 429 }
       );
     }
