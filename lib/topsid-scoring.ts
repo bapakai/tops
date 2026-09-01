@@ -115,9 +115,10 @@ export function recommendationConfidence(profile:UserHairProfile,styles:ScoredHa
 
 export function fitAdjustments(profile:UserHairProfile,style:HairstyleForScoring) {
   const out:string[]=[];
-  if(profile.face_shape && !matches(style.face_shapes,profile.face_shape)) out.push("Sesuaikan volume samping/atas agar proporsi wajah tetap seimbang.");
-  if(profile.hair_type && !matches(style.hair_types,profile.hair_type)) out.push("Barber dapat mengadaptasikan teknik potong mengikuti karakter rambutmu.");
-  if(profile.hair_texture && !matches(style.hair_textures,profile.hair_texture)) out.push("Pertahankan tekstur alami dan jangan memaksakan bentuk referensi secara mentah.");
-  if(profile.density && !matches(style.densities,profile.density)) out.push("Sesuaikan bobot rambut saat cutting agar hasil tetap proporsional.");
+  const known=(v?:string|null)=>!!v && normalize(v)!=="unknown";
+  if(known(profile.face_shape) && !matches(style.face_shapes,profile.face_shape)) out.push("Sesuaikan volume samping/atas agar proporsi wajah tetap seimbang.");
+  if(known(profile.hair_type) && !matches(style.hair_types,profile.hair_type)) out.push("Barber dapat mengadaptasikan teknik potong mengikuti karakter rambutmu.");
+  if(known(profile.hair_texture) && !matches(style.hair_textures,profile.hair_texture)) out.push("Pertahankan tekstur alami dan jangan memaksakan bentuk referensi secara mentah.");
+  if(known(profile.density) && !matches(style.densities,profile.density)) out.push("Sesuaikan bobot rambut saat cutting agar hasil tetap proporsional.");
   return out;
 }
